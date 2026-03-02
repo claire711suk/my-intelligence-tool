@@ -8,7 +8,7 @@ import google.generativeai as genai
 
 # 配置 Gemini API
 genai.configure(api_key=os.environ.get("GEMINI_API_KEY"))
-model = genai.GenerativeModel('gemini-1.5-flash')
+model = genai.GenerativeModel('models/gemini-1.5-flash')
 
 # RSS 源配置
 RSS_FEEDS = {
