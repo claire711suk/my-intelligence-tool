@@ -16,6 +16,7 @@ RSS_FEEDS = {
         "https://36kr.com/feed",
         "https://www.huxiu.com/rss/0.xml",
         "https://www.tmtpost.com/rss.xml"
+        "https://www.huxiu/moment.com/rss.xml"
     ],
     "投资逻辑": [
         "https://xueqiu.com/hots/topic/rss"
@@ -50,11 +51,11 @@ def summarize_content(category, content_list):
         prompt_base += f"- 标题: {item['title']}\n  链接: {item['link']}\n  内容摘要: {item['summary'][:300]}\n\n"
     
     if category == "科技/互联网":
-        prompt_base += "要求：总结业务逻辑、市场变化、融资数据。请使用简洁的 Markdown 列表格式。"
+        prompt_base += "要求：总结业务逻辑、市场变化、融资数据。请直接输出纯文本段落，不要使用 Markdown 符号（如 #, *, **），每个观点为一个自然段。"
     elif category == "投资逻辑":
-        prompt_base += "要求：总结估值逻辑、护城河、风险提示。请使用简洁的 Markdown 列表格式。"
+        prompt_base += "要求：总结：热门投资行业具体热门公司或项目、分析其估值逻辑、护城护、风险提示。请直接输出纯文本段落，不要使用 Markdown 符号（如 #, *, **），每个观点为一个自然段。"
     else:  # 全球热点
-        prompt_base += "要求：以‘趋势观察员’视角，分析为何火、本质创新、对个体的启发。请使用简洁的 Markdown 列表格式。"
+        prompt_base += "要求：以‘趋势观察员’视角，分析为何火、本质创新、对个体的启发。请直接输出纯文本段落，不要使用 Markdown 符号（如 #, *, **），每个观点为一个自然段。"
 
     try:
         response = model.generate_content(prompt_base)
@@ -63,14 +64,32 @@ def summarize_content(category, content_list):
         print(f"AI Summarization Error: {e}")
         return "AI 摘要生成失败。"
 
+def clean_text(text):
+    import re
+    # 移除 Markdown 标题符号 (#)
+    text = re.sub(r'#+\s*', '', text)
+    # 移除加粗符号 (**)
+    text = text.replace('**', '')
+    # 移除列表符号 (*)
+    text = re.sub(r'^\s*[\*\-]\s*', '', text, flags=re.MULTILINE)
+    return text.strip()
+
 def generate_html(summaries, articles_data):
     today = datetime.datetime.now().strftime("%Y年%m月%d日")
     
     sections_html = ""
     for category in ["科技/互联网", "投资逻辑", "全球热点"]:
-        summary = summaries.get(category, "暂无摘要")
-        articles = articles_data.get(category, [])
+        raw_summary = summaries.get(category, "暂无摘要")
+        summary = clean_text(raw_summary)
         
+        # 将文本按行分割，并包裹在带缩进的段落中
+        paragraphs = summary.split('\n')
+        formatted_summary = ""
+        for p in paragraphs:
+            if p.strip():
+                formatted_summary += f'<p class="mb-3 text-justify" style="text-indent: 2em;">{p.strip()}</p>'
+
+        articles = articles_data.get(category, [])
         links_html = ""
         if articles:
             links_html = '<div class="mt-6 pt-4 border-t border-gray-100"><h3 class="serif text-sm font-bold mb-2 text-gray-400 uppercase tracking-wider">深度阅读</h3><ul class="space-y-2">'
@@ -83,7 +102,7 @@ def generate_html(summaries, articles_data):
                     <div class="flex-grow">
                         <h2 class="serif text-xl font-bold mb-4">{category}</h2>
                         <div class="markdown-content text-sm leading-relaxed text-gray-600">
-                            {summary}
+                            {formatted_summary}
                         </div>
                     </div>
                     {links_html}
